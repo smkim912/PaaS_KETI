@@ -1,2 +1,2 @@
 PaaS Server Program
-- Python 2.7.6
+- Developed in Python 2.7.6
