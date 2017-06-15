@@ -1,0 +1,1 @@
+{"EventId":1,"DeviceList":[{"DeviceId":"SENSOR03","Status":1,"DataList":[{"DataId":"TEMP","Value":"000.00"},{"DataId":"HUMID","Value":"000"},{"DataId":"CO2","Value":"00000"},{"DataId":"LUX","Value":"00000"}]}]}
