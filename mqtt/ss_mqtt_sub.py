@@ -51,12 +51,7 @@ g_influxdbconn = InfluxDBManager()
 
 
 
-#msgfd = open("msg", 'r')
-#sample = msgfd.readline()
-#payload_dict = ast.literal_eval(sample)
-
 def payloadParser(payload_dict):
-#	eventid = payload_dict['EventId']
 	devicelist = payload_dict['DeviceList']
 	device_list = []
 	for i in range(len(devicelist)):
@@ -71,7 +66,12 @@ def payloadParser(payload_dict):
 		for l in range(len(data_list)):
 			name = data_list[l]['DataId']
 			val = data_list[l]['Value']
-			json_dict[name] = float(val)
+			# debug ValueError by smkim(170705)
+			try:	
+				json_dict[name] = float(val)	
+			except ValueError:
+				json_dict[name] = val
+			##################################
 		if len(json_dict) != 0:
 			json_val = json.dumps(json_dict)
 			g_influxdbconn.insert(deviceid, json_val)
