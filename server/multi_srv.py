@@ -221,10 +221,10 @@ def meterMsgParser(chunk):
 			float.fromhex("0x"+A_pow_factor.encode("hex")), 
 			float.fromhex("0x"+B_pow_factor.encode("hex")), 
 			float.fromhex("0x"+C_pow_factor.encode("hex")), 
-#			float.fromhex("0x"+total_active_pow.encode("hex")), 
-#			float.fromhex("0x"+total_reactive_pow.encode("hex")), 
-			long("0x"+total_active_pow.encode("hex"),16), 
-			long("0x"+total_reactive_pow.encode("hex"),16), 
+			float.fromhex("0x"+total_active_pow.encode("hex")), #original 
+			float.fromhex("0x"+total_reactive_pow.encode("hex")),   #original 
+#			long("0x"+total_active_pow.encode("hex"),16), 
+#			long("0x"+total_reactive_pow.encode("hex"),16), 
 			float.fromhex("0x"+A_active_pow.encode("hex")), 
 			float.fromhex("0x"+B_active_pow.encode("hex")), 
 			float.fromhex("0x"+C_active_pow.encode("hex")), 
