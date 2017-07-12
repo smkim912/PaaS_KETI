@@ -108,25 +108,53 @@ def classifyBuff(buff):
 		ID = chunk[4:8]
 		equip = chunk[8:16]
 		factory = chunk[16:24]
-		datalen = chunk[24:28]
-		d_len = int("0x" + str(''.join(reversed(datalen)).encode("hex")), 16)
 
-		if equip == 'meter\x00\x00\x00':
-			if d_len == METERLEN:
-				meterMsgParser(chunk)
-			else:
-				print 'classifyBuff(): <PowerMeter> data packet loss.'
-				log.write('classifyBuff(): <PowerMeter> data packet loss.\n')
+		if equip[:5] == 'meter':
+			meterMsgParser(chunk)
+		elif equip[:6] == '1600Vx':		#with device number(e.g., 1600Vx01, 1600Vx02, ...)
+			mesMsgParser(chunk) 
 		else:
 			print 'classifyBuff(): Unknown equipment'
 			log.write('classifyBuff(): Unknown equipment\n')
 			break
-'''		elif equip == 'oil':
-			if d_len == OILLEN:
-				oilMsgParser(chunk)
-		elif equip == 'mes':
-			if d_len == MESLEN:				
-				mesMsgParser(chunk)'''
+
+def mesMsgParser(chunk):
+	ID = chunk[4:8]
+	print 'mesMsgParser(): <MES:' + ID + '> data packet are received.'
+	print 'mesMsgParser(): data> ' + chunk.encode("hex")
+	log.write('mesMsgParser(): <MES:' + ID + '> data packet are received.\n')
+	log.write('mesMsgParser(): data> ' + chunk.encode("hex") + '\n')
+
+	# split of data frame
+	fullen = chunk[:4]
+	h_len = int("0x" + str(''.join(reversed(fullen)).encode("hex")), 16)
+	equip = chunk[8:16]
+	factory = chunk[16:24]
+	txtype = chunk[24:25]
+	datalen = chunk[25:29]
+	d_len = int("0x" + str(''.join(reversed(datalen)).encode("hex")), 16)
+	data_idx = 29 + d_len
+	devdata = chunk[29:data_idx]
+
+	if d_len != len(devdata):
+		print 'mesMsgParser(): <MES> data packet loss.'
+		log.write('mesMsgParser(): <MES> data packet loss.\n')
+		return -1
+
+	# we may need CRC(?) check.
+	# split for the data frame of the power meter
+#	active_pow = devdata[11:15]
+#	reactive_pow = devdata[15:19]
+
+	print '<<Received data>>' 
+	print '[ALL_LEN] : ' + fullen + " / " + fullen.encode("hex") + " int:" + str(h_len)
+	print '[ID]      : ' + ID + " / " + ID.encode("hex")
+	print '[EQUIP.]  : ' + equip + " / " + equip.encode("hex")
+	print '[FACTORY] : ' + factory + " / "  + factory.encode("hex")
+	print '[TxTYPE]  : ' + txtype + " / " + txtype.encode("hex")
+	print '[DATA_LEN]: ' + datalen + " / "  + datalen.encode("hex") + " int:" + str(d_len)
+	print '[DATA]    : ' + devdata + " / "  + devdata.encode("hex")
+
 
 
 def meterMsgParser(chunk):
@@ -145,6 +173,11 @@ def meterMsgParser(chunk):
 	d_len = int("0x" + str(''.join(reversed(datalen)).encode("hex")), 16)
 	data_idx = 28 + d_len
 	devdata = chunk[28:data_idx]
+	
+	if d_len != METERLEN:
+		print 'meterMsgParser(): <PowerMeter> data packet loss.'
+		log.write('meterMsgParser(): <PowerMeter> data packet loss.\n')
+		return -1
 
 	# we may need CRC(?) check.
 	# split for the data frame of the power meter
@@ -235,7 +268,6 @@ def gettingMsg(conn, thNum):
 		else:
 #			print "data  > " + data
 #			print "\nrecv  > " + "".join("%02x" % ord(c) for c in data)
-#			buff += data
 			classifyBuff(data)
 			time.sleep(0.1)
 	conn.close()

@@ -34,9 +34,10 @@ class InfluxDBManager :
 		self.m_oDBConn.open()
 
 	def insert(self, nId, nEqp, nFact, nActPow, nReactPow, nAvolt, nBvolt, nCvolt, nAcurr, nBcurr, nCcurr, nAangl, nBangl, nCangl, nApowFact, nBpowFact, nCpowFact, nTotActPow, nTotReactPow, nAactPow, nBactPow, nCactPow, nAreactPow, nBreactPow, nCreactPow) :
+		table = nEqp.strip('\0')
 		json_falinux_body = [
 			{
-			    "measurement": "power",
+			    "measurement": table,
 			    "tags": {
 			        "id":  nId,
 					"equip": nEqp,
