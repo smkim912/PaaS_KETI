@@ -278,7 +278,7 @@ while True:
 	print 'Connected by ', addr
 	log.write('Connected by ' + str(addr) + '\n')
 	threading._start_new_thread(gettingMsg,(conn,conn_cnt,))	
-	timer = threading.Timer(0, aliveExpired, args=[ALIVEPERIOD, conn_cnt-1])
+	timer = threading.Timer(0, aliveExpired, args=[ALIVEPERIOD, conn_cnt])
 
 	try:
 		idx = conn_list.index(-1)
