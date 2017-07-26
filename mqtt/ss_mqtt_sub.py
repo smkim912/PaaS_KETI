@@ -3,6 +3,9 @@ import json
 import ast #sample test
 from influxdb import InfluxDBClient
 
+mqttc = mqtt.Client("keti_pub")
+mqttc.connect("test.mosquitto.org", 1883)
+
 class InfluxDB :
 	m_conn = None
 	
@@ -49,8 +52,6 @@ class InfluxDBManager :
 g_influxdbconn = InfluxDBManager()
 
 
-
-
 def payloadParser(payload_dict):
 	devicelist = payload_dict['DeviceList']
 	device_list = []
@@ -83,6 +84,7 @@ def on_connect(client, userdata, rc):
 def on_message(client, userdata, msg):
 	print "Topic: ", msg.topic + '\nMessage: ' + str(msg.payload)
 	payload_dict = json.loads(msg.payload)
+	mqttc.publish("keti/mqttd", msg.payload)
 	payloadParser(payload_dict)
 
 client = mqtt.Client()       

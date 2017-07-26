@@ -10,6 +10,8 @@ import sys
 import time
 from cmpInfluxDB import InfluxDBManager
 from datetime import datetime
+import paho.mqtt.client as mqtt
+import json
 
 HOST = ''
 PORT = 4000
@@ -32,6 +34,9 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 s.bind((HOST, PORT))
 s.listen(3)
+
+mqttc = mqtt.Client("keti_meter_pub")
+mqttc.connect("test.mosquitto.org", 1883)
 
 g_influxdbconn = InfluxDBManager()
 
@@ -204,6 +209,38 @@ def meterMsgParser(chunk):
 	B_reactive_pow = devdata[91:95]
 	C_reactive_pow = devdata[95:99]
 
+	json_list = []
+	json_list.append(h_len)
+	json_list.append(ID)
+	json_list.append(equip)
+	json_list.append(factory)
+	json_list.append(d_len)
+	json_list.append(long("0x"+active_pow.encode("hex"),16))
+	json_list.append(long("0x"+reactive_pow.encode("hex"),16))
+	json_list.append(float.fromhex("0x"+A_volt.encode("hex")))
+	json_list.append(float.fromhex("0x"+B_volt.encode("hex")))
+	json_list.append(float.fromhex("0x"+C_volt.encode("hex")))
+	json_list.append(float.fromhex("0x"+A_current.encode("hex")))
+	json_list.append(float.fromhex("0x"+B_current.encode("hex")))
+	json_list.append(float.fromhex("0x"+C_current.encode("hex")))
+	json_list.append(float.fromhex("0x"+A_angle.encode("hex")))
+	json_list.append(float.fromhex("0x"+B_angle.encode("hex")))
+	json_list.append(float.fromhex("0x"+C_angle.encode("hex")))
+	json_list.append(float.fromhex("0x"+A_pow_factor.encode("hex")))
+	json_list.append(float.fromhex("0x"+B_pow_factor.encode("hex")))
+	json_list.append(float.fromhex("0x"+C_pow_factor.encode("hex")))
+	json_list.append(float.fromhex("0x"+total_active_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+total_reactive_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+A_active_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+B_active_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+C_active_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+A_reactive_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+B_reactive_pow.encode("hex")))
+	json_list.append(float.fromhex("0x"+C_reactive_pow.encode("hex")))
+
+	json_val = json.dumps(json_list)
+	mqttc.publish("keti/meterd", json_val)
+
 	g_influxdbconn.insert(ID, 
 			equip, 
 			factory, 
@@ -221,8 +258,8 @@ def meterMsgParser(chunk):
 			float.fromhex("0x"+A_pow_factor.encode("hex")), 
 			float.fromhex("0x"+B_pow_factor.encode("hex")), 
 			float.fromhex("0x"+C_pow_factor.encode("hex")), 
-			float.fromhex("0x"+total_active_pow.encode("hex")), #original 
-			float.fromhex("0x"+total_reactive_pow.encode("hex")),   #original 
+			float.fromhex("0x"+total_active_pow.encode("hex")), 
+			float.fromhex("0x"+total_reactive_pow.encode("hex")), 
 #			long("0x"+total_active_pow.encode("hex"),16), 
 #			long("0x"+total_reactive_pow.encode("hex"),16), 
 			float.fromhex("0x"+A_active_pow.encode("hex")), 
