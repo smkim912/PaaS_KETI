@@ -23,6 +23,7 @@ ALIVEPERIOD = 2100	# 35mins
 
 # equiptments data length
 METERLEN = 101
+MESLEN = 117
 
 conn_list = []
 conn_cnt = 0
@@ -35,12 +36,21 @@ s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 s.bind((HOST, PORT))
 s.listen(3)
 
+def on_disconnect(client, userdata, rc):
+	print "Disconnected from MQTT server with code: %s" % rc + "\n"
+	while rc != 0:
+		time.sleep(1)
+		print "Reconnecting..."
+		rc = mqttc.reconnect()
+
 mqttc = mqtt.Client("keti_meter_pub")
-mqttc.connect("test.mosquitto.org", 1883)
+mqttc.on_disconnect = on_disconnect
+mqttc.username_pw_set("admin", "exemexem7")
+mqttc.connect("13.124.187.149", 61613)
 
-g_influxdbconn = InfluxDBManager()
+g_influxdbconn = InfluxDBManager('ketidb')
 
-date = datetime.today().strftime("%Y%m%d")
+date = datetime.today().strftime("%Y%m%d_%H%M%S")
 date = date + "-paas-log"
 log = open(date, 'w')
 
@@ -51,12 +61,18 @@ def signal_handler(signal, frame):
 	log.write('You pressed Ctrl+C. The application update has started!\n')
 	log.write("The update command is being sending > " + "".join("%02x" % ord(c) for c in UPDATECOMM) + "\n")
 
+	for n in conn_list:
+		print "conn_list:" + str(conn_list.index(n)) + ":" + str(n)
+	print 'conn_cnt: ' + str(conn_cnt)
 	while conn_cnt > 0:
 		exit_flag_list[conn_cnt-1] = -1
 #		conn_list[conn_cnt-1].send(UPDATECOMM)	//update comm error 170530 smkim
 		conn = conn_list.pop()
 		conn_cnt -= 1
-		conn.close()
+		try:
+			conn.close()
+		except AttributeError:
+			conn = 0
 	time.sleep(1)
 	conn_list[:] = []
 	exptimer_list[:] = []
@@ -119,14 +135,14 @@ def classifyBuff(buff):
 		elif equip[:6] == '1600Vx':		#with device number(e.g., 1600Vx01, 1600Vx02, ...)
 			mesMsgParser(chunk) 
 		else:
-			print 'classifyBuff(): Unknown equipment'
-			log.write('classifyBuff(): Unknown equipment\n')
+			print 'classifyBuff(): Unknown equipment: ' + equip
+			log.write('classifyBuff(): Unknown equipment: ' + equip + '\n')
 			break
 
 def mesMsgParser(chunk):
 	ID = chunk[4:8]
-	print 'mesMsgParser(): <MES:' + ID + '> data packet are received.'
-	print 'mesMsgParser(): data> ' + chunk.encode("hex")
+#	print 'mesMsgParser(): <MES:' + ID + '> data packet are received.'
+#	print 'mesMsgParser(): data> ' + chunk.encode("hex")
 	log.write('mesMsgParser(): <MES:' + ID + '> data packet are received.\n')
 	log.write('mesMsgParser(): data> ' + chunk.encode("hex") + '\n')
 
@@ -141,24 +157,118 @@ def mesMsgParser(chunk):
 	data_idx = 29 + d_len
 	devdata = chunk[29:data_idx]
 
-	if d_len != len(devdata):
-		print 'mesMsgParser(): <MES> data packet loss.'
+	if txtype == 'T':
+		return
+	if d_len != MESLEN:
+#		print 'mesMsgParser(): <MES> data packet loss.'
 		log.write('mesMsgParser(): <MES> data packet loss.\n')
 		return -1
 
 	# we may need CRC(?) check.
 	# split for the data frame of the power meter
-#	active_pow = devdata[11:15]
-#	reactive_pow = devdata[15:19]
+	try:
+		mes_num = devdata[1:3].decode("utf8")
+		comm = devdata[3:5].decode("utf8")
+		h_event = devdata[6:16].decode("utf8")
+		order_num = devdata[17:37].decode("utf8")
+		sys_status = devdata[38:40].decode("utf8")
+		work_status = devdata[41].decode("utf8")
+		work_prio = devdata[43].decode("utf8")
+		worker_code = devdata[45:49].decode("utf8")
+		production = devdata[50:54].decode("utf8")
+		faulty_1 = devdata[55:59].decode("utf8")
+		faulty_2 = devdata[60:64].decode("utf8")
+		faulty_3 = devdata[65:69].decode("utf8")
+		faulty_4 = devdata[70:74].decode("utf8")
+		faulty_5 = devdata[75:79].decode("utf8")
+		faulty_6 = devdata[80:84].decode("utf8")
+		faulty_7 = devdata[85:89].decode("utf8")
+		faulty_8 = devdata[90:94].decode("utf8")
+		faulty_9 = devdata[95:99].decode("utf8")
+		argdate = devdata[100:106]
+		tdate = str("%02d"% int(argdate[:2],16))+str("%02d"% int(argdate[2:4],16))+str("%02d"% int(argdate[4:6],16))
+		tdate = tdate.decode("utf8")
+		argtime = devdata[106:112]
+		ttime = str("%02d"% int(argtime[:2],16))+str("%02d"% int(argtime[2:4],16))+str("%02d"% int(argtime[4:6],16))
+		ttime = ttime.decode("utf8")
+	except ValueError,UnicodeDecodeError:	#unknown error (e.g., MES num = 0x8a)
+		return
 
-	print '<<Received data>>' 
+	json_list = []
+	json_list.append(mes_num)
+	json_list.append(comm)
+	json_list.append(h_event)
+	json_list.append(order_num)
+	json_list.append(sys_status)
+	json_list.append(work_status)
+	json_list.append(work_prio)
+	json_list.append(worker_code)
+	json_list.append(production)
+	json_list.append(faulty_1)
+	json_list.append(faulty_2)
+	json_list.append(faulty_3)
+	json_list.append(faulty_4)
+	json_list.append(faulty_5)
+	json_list.append(faulty_6)
+	json_list.append(faulty_7)
+	json_list.append(faulty_8)
+	json_list.append(faulty_9)
+	json_list.append(tdate)
+	json_list.append(ttime)
+
+	json_val = json.dumps(json_list)
+	mqttc.publish("mesd", json_val)
+
+	ts = time.mktime(time.strptime("20"+tdate+ttime, '%Y%m%d%H%M%S'))
+	influx_ts = int(ts) * 1000000000
+	try:
+		g_influxdbconn.insertMES("mes", ID,
+			equip, 
+			factory, 
+			mes_num, 
+			comm, 
+			h_event, 
+			order_num,
+			sys_status,
+			work_status,
+			worker_code,
+			int(production, 16),
+			int(faulty_1, 16),
+			int(faulty_2, 16),
+			int(faulty_3, 16),
+			int(faulty_4, 16),
+			int(faulty_5, 16),
+			int(faulty_6, 16),
+			int(faulty_7, 16),
+			int(faulty_8, 16),
+			int(faulty_9, 16),
+			influx_ts)
+	except ValueError,UnicodeDecodeError:	#unknown error (e.g., MES num = 0x8a)
+		return
+
+'''
+	print '[mes_num]     : ' + mes_num
+	print '[comm]        : ' + comm
+	print '[h_event]     : ' + h_event
+	print '[order_num]   : ' + order_num
+	print '[sys_status]  : ' + sys_status
+	print '[work_status] : ' + work_status
+	print '[work_prio]   : ' + work_prio
+	print '[worker_code] : ' + worker_code
+	print '[production]  : ' + production
+	print '[faulty_1]    : ' + faulty_1
+	print '[faulty_9]    : ' + faulty_9
+	print '[date]        : ' + date
+	print '[time]        : ' + time'''
+
+'''	print '<<Received data>>' 
 	print '[ALL_LEN] : ' + fullen + " / " + fullen.encode("hex") + " int:" + str(h_len)
 	print '[ID]      : ' + ID + " / " + ID.encode("hex")
 	print '[EQUIP.]  : ' + equip + " / " + equip.encode("hex")
 	print '[FACTORY] : ' + factory + " / "  + factory.encode("hex")
 	print '[TxTYPE]  : ' + txtype + " / " + txtype.encode("hex")
 	print '[DATA_LEN]: ' + datalen + " / "  + datalen.encode("hex") + " int:" + str(d_len)
-	print '[DATA]    : ' + devdata + " / "  + devdata.encode("hex")
+	print '[DATA]    : ' + devdata + " / "  + devdata.encode("hex")'''
 
 
 
@@ -239,9 +349,9 @@ def meterMsgParser(chunk):
 	json_list.append(float.fromhex("0x"+C_reactive_pow.encode("hex")))
 
 	json_val = json.dumps(json_list)
-	mqttc.publish("keti/meterd", json_val)
+	mqttc.publish("meterd", json_val)
 
-	g_influxdbconn.insert(ID, 
+	g_influxdbconn.insert("meter", ID, 
 			equip, 
 			factory, 
 			long("0x"+active_pow.encode("hex"),16), 
@@ -305,6 +415,7 @@ def gettingMsg(conn, thNum):
 		else:
 #			print "data  > " + data
 #			print "\nrecv  > " + "".join("%02x" % ord(c) for c in data)
+#			reset_flag_list[thNum] = 1 # no alive-check signal from falinux_v2 (170810 smkim)
 			classifyBuff(data)
 			time.sleep(0.1)
 	conn.close()
@@ -314,8 +425,6 @@ while True:
 	conn, addr = s.accept()
 	print 'Connected by ', addr
 	log.write('Connected by ' + str(addr) + '\n')
-	threading._start_new_thread(gettingMsg,(conn,conn_cnt,))	
-	timer = threading.Timer(0, aliveExpired, args=[ALIVEPERIOD, conn_cnt])
 
 	try:
 		idx = conn_list.index(-1)
@@ -324,6 +433,10 @@ while True:
 
 	if idx == -1:
 		conn_list.append(conn)
+		thNum = conn_list.index(conn)
+		print 'thread num: ', thNum
+		log.write('thread num: ' + str(thNum) + '\n')
+		timer = threading.Timer(0, aliveExpired, args=[ALIVEPERIOD, thNum])
 		exptimer_list.append(timer)
 		exit_flag_list.append(0)
 		reset_flag_list.append(0)
@@ -332,5 +445,10 @@ while True:
 		exptimer_list[idx] = conn
 		exit_flag_list[idx] = 0
 		reset_flag_list[idx] = 0
+		thNum = idx
+		print 'thread Num: ', thNum
+		timer = threading.Timer(0, aliveExpired, args=[ALIVEPERIOD, thNum])
 	conn_cnt += 1
+
+	threading._start_new_thread(gettingMsg,(conn,thNum,))	
 	timer.start()

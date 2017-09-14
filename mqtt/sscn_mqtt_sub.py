@@ -10,7 +10,7 @@ def on_disconnect(client, userdata, rc):
 		print "Reconnecting..."
 		rc = mqttc.reconnect()
 
-mqttc = mqtt.Client("keti_mqtt_pub")
+mqttc = mqtt.Client("keti_cn_mqtt_pub")
 mqttc.on_disconnect = on_disconnect
 mqttc.username_pw_set("admin", "exemexem7")
 mqttc.connect("13.124.187.149", 61613)
@@ -25,7 +25,7 @@ class InfluxDB :
 		bConti = True
 		while bConti :
 			try :
-				self.m_dConn = InfluxDBClient('127.0.0.1', 8086, 'keti', 'itek', 'mqttdb')
+				self.m_dConn = InfluxDBClient('127.0.0.1', 8086, 'keti', 'itek', 'cn_mqttdb')
 				bConti = False
 			except Exception, e :
 #time.sleep(CmpGlobal.g_nConnectionRetryInterval)
@@ -88,7 +88,7 @@ def payloadParser(payload_dict):
 
 def on_connect(client, userdata, rc):
 	print ("Connected with result code " + str(rc))
-	client.subscribe('GW01')
+	client.subscribe('GW01_CN')
 
 def on_message(client, userdata, msg):
 	print "Topic: ", msg.topic + '\nMessage: ' + str(msg.payload)
