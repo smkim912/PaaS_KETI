@@ -2,6 +2,10 @@ import paho.mqtt.client as mqtt
 import json
 import time
 from influxdb import InfluxDBClient
+from influxdb.exceptions import InfluxDBClientError
+
+VERSION = '171108'
+print 'Run a Server program for MQTT. ver_' + VERSION
 
 def on_disconnect(client, userdata, rc):
 	print "Disconnected from MQTT server with code: %s" % rc + "\n"
@@ -12,8 +16,8 @@ def on_disconnect(client, userdata, rc):
 
 mqttc = mqtt.Client("keti_mqtt_pub")
 mqttc.on_disconnect = on_disconnect
-mqttc.username_pw_set("admin", "exemexem7")
-mqttc.connect("13.124.187.149", 61613)
+mqttc.username_pw_set("admin", "AQSWdefr1234")
+#mqttc.connect("52.79.176.120", 61613)
 
 class InfluxDB :
 	m_conn = None
@@ -34,7 +38,10 @@ class InfluxDB :
 
 	def insertData(self, jsondata) :
 		print("Write points: {0}".format(jsondata))
-		self.m_dConn.write_points(jsondata)
+		try: 
+			self.m_dConn.write_points(jsondata)
+		except InfluxDBClientError as e:
+			print "InfluxDB error:"+str(e)	
 
 
 
@@ -93,7 +100,7 @@ def on_connect(client, userdata, rc):
 def on_message(client, userdata, msg):
 	print "Topic: ", msg.topic + '\nMessage: ' + str(msg.payload)
 	payload_dict = json.loads(msg.payload)
-	mqttc.publish("mqttd", msg.payload)
+	#mqttc.publish("mqttd", msg.payload)
 	payloadParser(payload_dict)
 
 client = mqtt.Client()       

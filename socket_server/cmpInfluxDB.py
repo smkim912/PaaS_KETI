@@ -21,7 +21,7 @@ class InfluxDB :
 				print "--------------------------------- influxdb connect fail -------------------------------------"
 
 	def insertData(self, jsondata) :
-		print("Write points: {0}".format(jsondata))
+		#print("Write points: {0}".format(jsondata))
 		self.m_dConn.write_points(jsondata)
 
 

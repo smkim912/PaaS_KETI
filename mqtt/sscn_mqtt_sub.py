@@ -3,6 +3,9 @@ import json
 import time
 from influxdb import InfluxDBClient
 
+VERSION = '170926'
+print 'Run a Server program for MQTT(CHN). ver_' + VERSION
+
 def on_disconnect(client, userdata, rc):
 	print "Disconnected from MQTT server with code: %s" % rc + "\n"
 	while rc != 0:
@@ -12,8 +15,8 @@ def on_disconnect(client, userdata, rc):
 
 mqttc = mqtt.Client("keti_cn_mqtt_pub")
 mqttc.on_disconnect = on_disconnect
-mqttc.username_pw_set("admin", "exemexem7")
-mqttc.connect("13.124.187.149", 61613)
+mqttc.username_pw_set("admin", "AQSWdefr1234")
+#mqttc.connect("52.79.176.120", 61613)
 
 class InfluxDB :
 	m_conn = None
@@ -93,7 +96,7 @@ def on_connect(client, userdata, rc):
 def on_message(client, userdata, msg):
 	print "Topic: ", msg.topic + '\nMessage: ' + str(msg.payload)
 	payload_dict = json.loads(msg.payload)
-	mqttc.publish("mqttd", msg.payload)
+	#mqttc.publish("mqttd", msg.payload)
 	payloadParser(payload_dict)
 
 client = mqtt.Client()       
